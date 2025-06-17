@@ -1,4 +1,4 @@
-module github.com/versent/unicreds
+module github.com/Versent/unicreds
 
 go 1.24.3
 
