@@ -1,3 +1,4 @@
+//go:build integration
 // +build integration
 
 package integration
@@ -35,14 +36,14 @@ func TestIntegrationGetSecret(t *testing.T) {
 		tableName = "credential-store"
 	}
 
-	unicreds.SetAwsConfig(aws.String(region), nil)
+	unicreds.SetAwsConfig(aws.String(region), nil, nil)
 
 	encContext := unicreds.NewEncryptionContextValue()
 
 	(*encContext)["test"] = aws.String("123")
 
 	for i := 0; i < 15; i++ {
-		err = unicreds.PutSecret(aws.String(tableName), alias, "Integration1", fmt.Sprintf("secret%d", i), unicreds.PaddedInt(i), encContext)
+		err = unicreds.PutSecret(aws.String(tableName), alias, "Integration1", fmt.Sprintf("secret%d", i), unicreds.PaddedInt(i), "integration-test", encContext)
 		if err != nil {
 			log.Errorf("put err: %v", err)
 		}
@@ -66,7 +67,7 @@ func TestIntegrationGetSecret(t *testing.T) {
 		assert.Equal(t, cred.Version, unicreds.PaddedInt(i))
 	}
 
-	creds, err := unicreds.GetAllSecrets(aws.String(tableName), true)
+	creds, err := unicreds.GetAllSecrets(aws.String(tableName), true, encContext)
 	assert.Nil(t, err)
 	assert.Len(t, creds, 15)
 

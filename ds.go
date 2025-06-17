@@ -65,6 +65,7 @@ type Credential struct {
 	Contents  string `dynamodbav:"contents"`
 	Hmac      []byte `dynamodbav:"hmac"`
 	CreatedAt int64  `dynamodbav:"created_at"`
+	CreatedBy string `dynamodbav:"created_by"`
 }
 
 // CreatedAtDate convert the timestamp field to a date string
@@ -174,9 +175,9 @@ func GetHighestVersionSecret(tableName *string, name string, encContext *Encrypt
 			},
 		},
 		KeyConditionExpression: aws.String("#N = :name"),
-		Limit:            aws.Int64(1),
-		ConsistentRead:   aws.Bool(true),
-		ScanIndexForward: aws.Bool(false), // descending order
+		Limit:                  aws.Int64(1),
+		ConsistentRead:         aws.Bool(true),
+		ScanIndexForward:       aws.Bool(false), // descending order
 	})
 
 	if err != nil {
@@ -241,10 +242,10 @@ func GetHighestVersion(tableName *string, name string) (string, error) {
 			},
 		},
 		KeyConditionExpression: aws.String("#N = :name"),
-		Limit:                aws.Int64(1),
-		ConsistentRead:       aws.Bool(true),
-		ScanIndexForward:     aws.Bool(false), // descending order
-		ProjectionExpression: aws.String("version"),
+		Limit:                  aws.Int64(1),
+		ConsistentRead:         aws.Bool(true),
+		ScanIndexForward:       aws.Bool(false), // descending order
+		ProjectionExpression:   aws.String("version"),
 	})
 
 	if err != nil {
@@ -376,7 +377,7 @@ func GetAllSecrets(tableName *string, allVersions bool, encContext *EncryptionCo
 }
 
 // PutSecret retrieve the secret from dynamodb
-func PutSecret(tableName *string, alias, name, secret, version string, encContext *EncryptionContextValue) error {
+func PutSecret(tableName *string, alias, name, secret, version, createdBy string, encContext *EncryptionContextValue) error {
 	log.Debug("Putting secret")
 
 	kmsKey := DefaultKmsKey
@@ -387,6 +388,11 @@ func PutSecret(tableName *string, alias, name, secret, version string, encContex
 
 	if version == "" {
 		version = PaddedInt(1)
+	}
+
+	// Default createdBy if not provided
+	if createdBy == "" {
+		createdBy = "system"
 	}
 
 	dk, err := GenerateDataKey(kmsKey, encContext, 64)
@@ -416,6 +422,7 @@ func PutSecret(tableName *string, alias, name, secret, version string, encContex
 		Contents:  b64ctext,
 		Hmac:      b64hmac,
 		CreatedAt: time.Now().Unix(),
+		CreatedBy: createdBy,
 	}
 
 	data, err := Encode(cred)

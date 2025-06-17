@@ -45,15 +45,17 @@ var (
 	cmdList            = app.Command("list", "List latest credentials with names and version.")
 	cmdListAllVersions = cmdList.Flag("all", "List all versions").Bool()
 
-	cmdPut        = app.Command("put", "Put a credential into the store.")
-	cmdPutName    = cmdPut.Arg("credential", "The name of the credential to store.").Required().String()
-	cmdPutSecret  = cmdPut.Arg("value", "The value of the credential to store.").Required().String()
-	cmdPutVersion = cmdPut.Arg("version", "Version to store with the credential.").Int()
+	cmdPut          = app.Command("put", "Put a credential into the store.")
+	cmdPutName      = cmdPut.Arg("credential", "The name of the credential to store.").Required().String()
+	cmdPutSecret    = cmdPut.Arg("value", "The value of the credential to store.").Required().String()
+	cmdPutVersion   = cmdPut.Arg("version", "Version to store with the credential.").Int()
+	cmdPutCreatedBy = cmdPut.Flag("created-by", "User who created this credential.").OverrideDefaultFromEnvar("UNICREDS_CREATED_BY").String()
 
 	cmdPutFile           = app.Command("put-file", "Put a credential from a file into the store.")
 	cmdPutFileName       = cmdPutFile.Arg("credential", "The name of the credential to store.").Required().String()
 	cmdPutFileSecretPath = cmdPutFile.Arg("value", "Path to file containing the credential to store.").Required().String()
 	cmdPutFileVersion    = cmdPutFile.Arg("version", "Version to store with the credential.").Int()
+	cmdPutFileCreatedBy  = cmdPutFile.Flag("created-by", "User who created this credential.").OverrideDefaultFromEnvar("UNICREDS_CREATED_BY").String()
 
 	cmdDelete     = app.Command("delete", "Delete a credential from the store.")
 	cmdDeleteName = cmdDelete.Arg("credential", "The name of the credential to delete.").Required().String()
@@ -118,7 +120,7 @@ func main() {
 
 		printEncryptionContext(encContext)
 
-		err = unicreds.PutSecret(dynamoTable, *alias, *cmdPutName, *cmdPutSecret, version, encContext)
+		err = unicreds.PutSecret(dynamoTable, *alias, *cmdPutName, *cmdPutSecret, version, *cmdPutCreatedBy, encContext)
 		if err != nil {
 			printFatalError(err)
 		}
@@ -136,7 +138,7 @@ func main() {
 			printFatalError(err)
 		}
 
-		err = unicreds.PutSecret(dynamoTable, *alias, *cmdPutFileName, string(data), version, encContext)
+		err = unicreds.PutSecret(dynamoTable, *alias, *cmdPutFileName, string(data), version, *cmdPutFileCreatedBy, encContext)
 		if err != nil {
 			printFatalError(err)
 		}
@@ -148,14 +150,14 @@ func main() {
 		}
 
 		table := unicreds.NewTable(os.Stdout)
-		table.SetHeaders([]string{"Name", "Version", "Created-At"})
+		table.SetHeaders([]string{"Name", "Version", "Created-At", "Created-By"})
 
 		if *csv {
 			table.SetFormat(unicreds.TableFormatCSV)
 		}
 
 		for _, cred := range creds {
-			table.Write([]string{cred.Name, cred.Version, cred.CreatedAtDate()})
+			table.Write([]string{cred.Name, cred.Version, cred.CreatedAtDate(), cred.CreatedBy})
 		}
 		if err = table.Render(); err != nil {
 			printFatalError(err)

@@ -51,8 +51,22 @@ func (tw *TableWriter) Render() error {
 	switch tw.tableFormat {
 	case TableFormatTerm:
 		table := tablewriter.NewWriter(tw.wr)
-		table.SetHeader(tw.headers)
-		table.AppendBulk(tw.rows)
+
+		// Convert headers to interface slice
+		headerInterfaces := make([]interface{}, len(tw.headers))
+		for i, h := range tw.headers {
+			headerInterfaces[i] = h
+		}
+		table.Header(headerInterfaces...)
+
+		// Convert rows to interface slices
+		for _, row := range tw.rows {
+			rowInterfaces := make([]interface{}, len(row))
+			for i, cell := range row {
+				rowInterfaces[i] = cell
+			}
+			table.Append(rowInterfaces...)
+		}
 		table.Render()
 	case TableFormatCSV:
 		w := csv.NewWriter(tw.wr)
